@@ -1,4 +1,4 @@
-name: Build and Push Docker Image to ECR
+name: Full CI/CD Deployment to EC2
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   ECR_REPOSITORY: portfolio-app
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,19 @@ jobs:
     - name: Push Docker image to ECR
       run: |
         docker push ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
+
+    - name: Decode SSH key
+      run: |
+        echo "${{ secrets.EC2_SSH_KEY_B64 }}" | base64 -d > private_key.pem
+        chmod 600 private_key.pem
+
+    - name: Deploy on EC2 via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
+          docker stop portfolio-container || true
+          docker rm portfolio-container || true
+          docker run -d -p 80:5000 --name portfolio-container ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
+        EOF
+
