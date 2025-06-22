@@ -37,6 +37,10 @@ jobs:
       run: |
         docker push ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
 
+    - name: Prepare Image URI
+      run: |
+        echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest" >> $GITHUB_ENV
+
     - name: Decode SSH key
       run: |
         echo "${{ secrets.EC2_SSH_KEY_B64 }}" | base64 -d > private_key.pem
@@ -44,11 +48,11 @@ jobs:
 
     - name: Deploy on EC2 via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-          aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-          docker pull ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
-          docker stop portfolio-container || true
-          docker rm portfolio-container || true
-          docker run -d -p 80:5000 --name portfolio-container ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} << EOF
+          aws ecr get-login-password --region eu-west-2 | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          sudo docker pull $IMAGE_URI
+          sudo docker stop portfolio-container || true
+          sudo docker rm portfolio-container || true
+          sudo docker run -d -p 80:5000 --name portfolio-container $IMAGE_URI
         EOF
 
