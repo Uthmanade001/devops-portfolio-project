@@ -55,7 +55,7 @@ jobs:
 
     - name: Deploy on EC2 via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} << EOF
+        ssh -o StrictHostKeyChecking=no -i uthman-key-verified.pem ubuntu@${{ secrets.EC2_HOST }} << EOF
           aws ecr get-login-password --region eu-west-2 | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
           sudo docker pull $IMAGE_URI
           sudo docker stop portfolio-container || true
