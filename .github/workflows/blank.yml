@@ -56,7 +56,12 @@ jobs:
     - name: Deploy on EC2 via SSH
       run: |
         ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} << EOF
-          aws ecr get-login-password --region eu-west-2 | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+          export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          export AWS_REGION="eu-west-2"
+
+          aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+
           sudo docker pull $IMAGE_URI
           sudo docker stop portfolio-container || true
           sudo docker rm portfolio-container || true
@@ -68,5 +73,3 @@ jobs:
             -e DB_PASSWORD=$DB_PASSWORD \
             $IMAGE_URI
         EOF
-
-
