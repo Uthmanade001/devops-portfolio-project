@@ -1,4 +1,4 @@
-name: Full CI/CD Deployment to EC2
+name: Full CI/CD Deployment to EC2 (IAM Role Based)
 
 on:
   push:
@@ -37,10 +37,6 @@ jobs:
       run: |
         docker push ${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest
 
-    - name: Prepare Image URI
-      run: |
-        echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest" >> $GITHUB_ENV
-
     - name: Decode SSH key
       run: |
         echo "${{ secrets.EC2_SSH_KEY_B64 }}" | base64 -d > private_key.pem
@@ -50,24 +46,14 @@ jobs:
       env:
         IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
       run: |
-        ssh -o StrictHostKeyChecking=no -i private_key.pem \
-        AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-        AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-        AWS_REGION=${{ env.AWS_REGION }} \
-        DB_HOST=${{ secrets.DB_HOST }} \
-        DB_NAME=${{ secrets.DB_NAME }} \
-        DB_USER=${{ secrets.DB_USER }} \
-        DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-        ubuntu@${{ secrets.EC2_HOST }} \
-        "aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }} && \
-        sudo docker pull $IMAGE_URI && \
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} \
+        "sudo docker pull $IMAGE_URI && \
         sudo docker stop portfolio-container || true && \
         sudo docker rm portfolio-container || true && \
         sudo docker run -d -p 80:5000 \
           --name portfolio-container \
-          -e DB_HOST=$DB_HOST \
-          -e DB_NAME=$DB_NAME \
-          -e DB_USER=$DB_USER \
-          -e DB_PASSWORD=$DB_PASSWORD \
+          -e DB_HOST=${{ secrets.DB_HOST }} \
+          -e DB_NAME=${{ secrets.DB_NAME }} \
+          -e DB_USER=${{ secrets.DB_USER }} \
+          -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
           $IMAGE_URI"
-
