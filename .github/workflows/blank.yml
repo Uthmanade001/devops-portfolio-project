@@ -41,6 +41,13 @@ jobs:
       run: |
         echo "IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:latest" >> $GITHUB_ENV
 
+    - name: Prepare DB environment variables
+      run: |
+        echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
+        echo "DB_NAME=${{ secrets.DB_NAME }}" >> $GITHUB_ENV
+        echo "DB_USER=${{ secrets.DB_USER }}" >> $GITHUB_ENV
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+
     - name: Decode SSH key
       run: |
         echo "${{ secrets.EC2_SSH_KEY_B64 }}" | base64 -d > private_key.pem
@@ -53,6 +60,13 @@ jobs:
           sudo docker pull $IMAGE_URI
           sudo docker stop portfolio-container || true
           sudo docker rm portfolio-container || true
-          sudo docker run -d -p 80:5000 --name portfolio-container $IMAGE_URI
+          sudo docker run -d -p 80:5000 \
+            --name portfolio-container \
+            -e DB_HOST=$DB_HOST \
+            -e DB_NAME=$DB_NAME \
+            -e DB_USER=$DB_USER \
+            -e DB_PASSWORD=$DB_PASSWORD \
+            $IMAGE_URI
         EOF
+
 

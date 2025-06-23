@@ -33,12 +33,12 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_instance" "web_server" {
-  ami                         = "ami-0505148b3591e4c07"  # Ubuntu 22.04 for eu-west-2 (London)
+  ami                         = "ami-0505148b3591e4c07"
   instance_type               = "t2.micro"
-  subnet_id                   = aws_subnet.public_subnet.id
+  subnet_id                   = aws_subnet.public_subnet_a.id  # <-- updated here
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   associate_public_ip_address = true
-  key_name                    = "uthman-key-verified" # REPLACE this with your actual key pair name
+  key_name                    = "uthman-key-verified"
 
   tags = {
     Name = "portfolio-ec2"
